@@ -38,7 +38,7 @@ class Net(nn.Module):
       return x
   
     
-def MyLossFunction(f_joint, f_product, J, kT):
+def LossFunction(f_joint, f_product, J, kT):
   
     E_joint = (f_joint * J * (
                             np.roll(f_joint, shift=1, axis=1) +
@@ -105,7 +105,7 @@ def main():
     
     AB_joint = torch.tensor(np.concatenate((A_joint, B_joint), axis=2)).unsqueeze(3)
     AB_product = torch.tensor(np.concatenate((A_product, B_product), axis=2)).unsqueeze(3)
-
+    
     AB = torch.tensor(np.concatenate((AB_joint, AB_product), axis=3))
 
     AB = AB.unsqueeze(1)
@@ -123,8 +123,11 @@ def main():
     
     # empty list to store training losses
     train_losses = []
+    print("\n==== The model architecture ====\n")
     print(model)
+    print()
     # training the model
+    flag = 0
     
     for epoch in range(n_epochs):
     
@@ -141,7 +144,7 @@ def main():
           
 
           
-          loss_train = torch.tensor(MyLossFunction(joint_output.detach().numpy(), product_output.detach().numpy(), J, kT))
+          loss_train = torch.tensor(LossFunction(joint_output.detach().numpy(), product_output.detach().numpy(), J, kT))
           
           
           loss_train.requires_grad=True
@@ -153,6 +156,20 @@ def main():
           loss_train.backward()
           optimizer.step()
           
+          if flag == 0:
+              flag = 1
+              print("==== unit test ====\n")
+              print(f"AB joint shape is: {AB_joint.shape}")
+              print(f"AB product shape is: {AB_product.shape}")
+              print(f"AB shape is: {AB.shape}")
+              print(f"The shape of the joint model's input is: {x[:,:,:,0].float().shape}")
+              print(f"The shape of the product model's input is: {x[:,:,:,1].float().shape}")
+              print(f"The shape of the joint model's output is: {joint_output.shape}")
+              print(f"The shape of the product model's output is: {product_output.shape}")
+              print()
+              print("epoch : loss")
+              print("=============")
+              print()
         train_losses.append(loss_train)
         print(epoch,' : ',loss_train.item())
     return train_losses      
