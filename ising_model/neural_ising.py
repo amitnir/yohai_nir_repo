@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Apr 20 10:46:40 2021
-
 @author: Nir
 """
 
-import simple_ising
+import simple_ising as si
 import numpy as np
 import copy
 import torch
@@ -21,101 +20,78 @@ from torch.utils.data import DataLoader
 class Net(nn.Module):
     def __init__(self):
       super(Net, self).__init__()
-      self.fc1 = nn.Linear(128, 64)
-      self.fc2 = nn.Linear(64, 16)
-      self.fc3 = nn.Linear(16, 1)
+      self.fc1 = nn.Linear(2*4, 2*2)
+      self.fc2 = nn.Linear(2*2, 2*1)
+      self.fc3 = nn.Linear(2*1, 1)
 
     def forward(self, x):
-      x = x.view(-1, x.size(0)) # turn it into a 2d tensor
+      x = x.view(-1, 2*4) # turn it into a 2d tensor
       x = self.fc1(F.relu(x))
       x = self.fc2(F.relu(x))
       x = self.fc3(F.relu(x))
       return x
     
-def LossFunction(f_joint, f_product, J, kT):
-    E_joint = (f_joint * J * (
-                            np.roll(f_joint, shift=1, axis=0) +
-                            np.roll(f_joint, shift=-1, axis=0) +
-                            np.roll(f_joint, shift=1, axis=1) +
-                            np.roll(f_joint, shift=-1, axis=1)
-                            )).sum(axis=(0,1))
-    boltzmann_joint = np.exp(-E_joint/kT) # unnormalized boltzmann 
-    Z_joint = boltzmann_joint.sum() 
-    mean_joint = (1/Z_joint) * ((boltzmann_joint * E_joint).sum())
-    E_product = (f_product * J * (
-                            np.roll(f_product, shift=1, axis=0) +
-                            np.roll(f_product, shift=-1, axis=0) +
-                            np.roll(f_product, shift=1, axis=1) +
-                            np.roll(f_product, shift=-1, axis=1)
-                            )).sum(axis=(0,1))
-    boltzmann_product = np.exp(-E_product/kT) # unnormalized boltzmann 
-    Z_product = boltzmann_product.sum()
-    mean_product = (1/Z_product) * ((boltzmann_product * np.exp(E_product)).sum()) 
-    return -(mean_joint - np.log(mean_product))
+def LossFunction(joint_prob, product_prob, joint_output, product_output):
+    eps = 0.00001
+    cond = product_prob < eps
+    cond = cond.tolist()
+    cond = np.where(cond)[0]
+    joint_prob = np.delete(joint_prob, cond)
+    joint_output = np.delete(joint_output, cond)
+    product_output = np.delete(product_output, cond)
+    product_prob = np.delete(product_prob, cond)
+    array = (joint_prob * joint_output) - np.log(product_prob * (np.exp(product_output)))
+    expectation_value = array.sum()
+    return expectation_value
 
 def run_ising(kT, n, m, J):
-    lattices = np.array(simple_ising.f_ising_creator(n, m)) # list of nxm ising lattices
-    left_lattices, right_lattices = simple_ising.f_splitter(lattices) # split all lattices into left and right ones
-    return left_lattices, right_lattices
+    lattices = np.array(si.f_ising_creator(n, m)) # list of nxm ising lattices
+    left_lattices, right_lattices = si.f_splitter(lattices) # split all lattices into left and right ones
+    return lattices, left_lattices, right_lattices
+
+def prob_calc(lattices, left_lattices, right_lattices, J, kT):
+    bol_lat = si.f_boltzmann(lattices, J, kT)
+    bol_left = si.f_boltzmann(left_lattices, J, kT)
+    bol_right = si.f_boltzmann(right_lattices, J, kT)
+    bol_left /= bol_left.sum()
+    bol_right /= bol_right.sum()
+    prod_prob = bol_left * bol_right
+    prod_prob /= prod_prob.sum()
+    joint_prob = bol_lat  
+    return prod_prob, joint_prob
+    
 
 def main():
-    kT = 0.5 
+    kT = 0.5
     J = 1
     n= 2
     m = 4 
-    seed = 1234
-    RS = np.random.RandomState(seed)
-    left_lattices, right_lattices = run_ising(kT, n, m, J)
-    right_lattices_copy = copy.deepcopy(right_lattices)
-    A_joint = torch.tensor(left_lattices)
-    B_joint = torch.tensor(right_lattices)
-    A_product = torch.tensor(left_lattices)
-    RS.shuffle(right_lattices_copy)
-    B_product = torch.tensor(copy.deepcopy(right_lattices_copy)) 
-    # ==== AB_joint and AB_product are 256x2x4 shape ====  
-    AB_joint = torch.tensor(np.concatenate((A_joint, B_joint), axis=2)).unsqueeze(3)
-    AB_product = torch.tensor(np.concatenate((A_product, B_product), axis=2)).unsqueeze(3)
-    AB = torch.tensor(np.concatenate((AB_joint, AB_product), axis=3))
-    AB = AB.unsqueeze(1)
-    loader = DataLoader(AB, batch_size=128, shuffle=True)
+    batch_size = 256
+    lattices, left_lattices, right_lattices = run_ising(kT, n, m, J)
+    product_prob, joint_prob = prob_calc(lattices, left_lattices, right_lattices, J, kT)
+    AB = torch.tensor(lattices)
+    loader = DataLoader(AB, batch_size=batch_size, shuffle=False)
     model = Net()
     optimizer = Adam(model.parameters(), lr=0.01, weight_decay=0.1)
     n_epochs = 25
     # empty list to store training losses
     train_losses = []
-    print("\n==== The model architecture ====\n")
-    print(model)
-    print()
+    
     # training the model
-    flag = 0
+    
     for epoch in range(n_epochs):
+        flag = 0
         for batch_idx, x in enumerate(loader):
-          # train the model
-          model.train()
-          # changing the elements from torch elements into numpy elements
-          joint_output = model(x[:,:,:,0].float())
-          product_output = model(x[:,:,:,1].float())
-          print(joint_output.shape)
-          loss_train = torch.tensor(LossFunction(joint_output.detach().numpy(), product_output.detach().numpy(), J, kT))
+          joint_output = model(x.float())
+          product_output = model(x.float())
+          loss_train = torch.tensor(LossFunction(joint_prob[flag:flag+batch_size], product_prob[flag:flag+batch_size], joint_output.detach().numpy(), product_output.detach().numpy()))
+          flag += batch_size
           loss_train.requires_grad=True     
           # computing the updated weights of all the model parameters
           optimizer.zero_grad() 
           loss_train.backward()
           optimizer.step()
-          if flag == 0:
-              flag = 1
-              print("==== unit test ====\n")
-              print(f"AB joint shape is: {AB_joint.shape}")
-              print(f"AB product shape is: {AB_product.shape}")
-              print(f"AB shape is: {AB.shape}")
-              print(f"The shape of the joint model's input is: {x[:,:,:,0].float().shape}")
-              print(f"The shape of the product model's input is: {x[:,:,:,1].float().shape}")
-              print(f"The shape of the joint model's output is: {joint_output.shape}")
-              print(f"The shape of the product model's output is: {product_output.shape}")
-              print()
-              print("epoch : loss")
-              print("=============")
-              print()
+
         train_losses.append(loss_train)
         print(epoch,' : ',loss_train.item())
     return train_losses      

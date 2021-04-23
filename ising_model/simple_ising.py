@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Apr 20 10:16:48 2021
-
 @author: Nir
 """
 
@@ -42,7 +41,18 @@ def f_entropy(lattices, J, kT):
                             )).sum(axis=(1,2))
     boltzmann = np.exp(-energy/kT) # unnormalized boltzmann
     entropies = entropy(boltzmann)
-    return entropies, energy  
+    return entropies, energy
+# calculate boltzmann normalized probabilities
+def f_boltzmann(lattices, J, kT):   
+    energy = (lattices * J * (
+                            np.roll(lattices, shift=1, axis=1) +
+                            np.roll(lattices, shift=-1, axis=1) +
+                            np.roll(lattices, shift=1, axis=2) +
+                            np.roll(lattices, shift=-1, axis=2)
+                            )).sum(axis=(1,2))
+    boltzmann = np.exp(-energy/kT) # unnormalized boltzmann
+    boltzmann = boltzmann / boltzmann.sum()
+    return boltzmann
 # calculate mutual information
 def f_mutual_informations(S_ab, S_a, S_b):   
   mutual_informations = (S_a + S_b) - S_ab 
