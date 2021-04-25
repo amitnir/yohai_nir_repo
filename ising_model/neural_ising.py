@@ -26,13 +26,16 @@ class Net(nn.Module):
 
     def forward(self, x):
       x = x.view(-1, 2*4) # turn it into a 2d tensor
-      x = self.fc1(F.relu(x))
-      x = self.fc2(F.relu(x))
-      x = self.fc3(F.relu(x))
+      #x = self.fc1(F.relu(x))
+      #x = self.fc2(F.relu(x))
+      #x = self.fc3(F.relu(x))
+      x = self.fc1(x)
+      x = self.fc2(x)
+      x = self.fc3(x)
       return x
     
 def LossFunction(joint_prob, product_prob, joint_output, product_output):
-    eps = 0.00001
+    eps = 1e-10
     cond = product_prob < eps
     cond = cond.tolist()
     cond = np.where(cond)[0]
@@ -40,9 +43,10 @@ def LossFunction(joint_prob, product_prob, joint_output, product_output):
     joint_output = np.delete(joint_output, cond)
     product_output = np.delete(product_output, cond)
     product_prob = np.delete(product_prob, cond)
-    array = (joint_prob * joint_output) - np.log(product_prob * (np.exp(product_output)))
-    expectation_value = array.sum()
-    return expectation_value
+    joint_part = (joint_prob * joint_output).sum()
+    product_part = np.log(product_prob * (np.exp(product_output))).sum()
+    mutual = (joint_part - product_part)
+    return mutual
 
 def run_ising(kT, n, m, J):
     lattices = np.array(si.f_ising_creator(n, m)) # list of nxm ising lattices
@@ -61,8 +65,8 @@ def prob_calc(lattices, left_lattices, right_lattices, J, kT):
     return prod_prob, joint_prob
     
 
-def main():
-    kT = 0.5
+def main(kT):
+    #kT = 9999
     J = 1
     n= 2
     m = 4 
@@ -91,8 +95,8 @@ def main():
           optimizer.zero_grad() 
           loss_train.backward()
           optimizer.step()
-
         train_losses.append(loss_train)
         print(epoch,' : ',loss_train.item())
-    return train_losses      
-train_losses = main()
+    return train_losses[0]      
+
+train_losses = main(kT=1)
