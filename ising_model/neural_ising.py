@@ -65,7 +65,7 @@ def prob_calc(lattices, left_lattices, right_lattices, J, kT):
     return prod_prob, joint_prob
     
 
-def main(kT):
+def calcualte_entropy_for_one_temperature(kT):
     #kT = 9999
     J = 1
     n= 2
@@ -76,7 +76,7 @@ def main(kT):
     AB = torch.tensor(lattices)
     loader = DataLoader(AB, batch_size=batch_size, shuffle=False)
     model = Net()
-    optimizer = Adam(model.parameters(), lr=0.01, weight_decay=0.1)
+    optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.01)
     n_epochs = 25
     # empty list to store training losses
     train_losses = []
@@ -96,7 +96,7 @@ def main(kT):
           loss_train.backward()
           optimizer.step()
         train_losses.append(loss_train)
-        print(epoch,' : ',loss_train.item())
+        #print(epoch,' : ',loss_train.item())
     return train_losses[0]      
 
-train_losses = main(kT=1)
+train_losses = calcualte_entropy_for_one_temperature(kT=1)

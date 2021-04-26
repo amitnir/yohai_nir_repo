@@ -16,9 +16,9 @@ list_mutual_information = []
 n = 2
 m = 4
 
-for kT in np.linspace(start_kT, end_kT, num=num_T, endpoint=False):
-      mutual_information = ni.main(kT)
-      list_mutual_information.append(mutual_information)  
+list_mutual_information = [
+  ni.calcualte_entropy_for_one_temperature(kT) for kT in np.linspace(start_kT, end_kT, num=num_T, endpoint=False)
+]
 plt.plot(np.linspace(start_kT, end_kT, num=num_T, endpoint=False), list_mutual_information, linewidth=5)
 plt.title(f'{n}x{m} ising model',fontsize=25)
 plt.ylabel('Averaged mutual information',fontsize=15)
