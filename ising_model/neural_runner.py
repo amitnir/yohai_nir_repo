@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 start_kT = 1
 end_kT = 30
-num_T = 10
+num_T = 40
 list_mutual_information = []
 n = 2
 m = 4
