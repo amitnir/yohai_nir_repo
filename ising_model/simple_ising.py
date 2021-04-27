@@ -99,10 +99,6 @@ def run_ising(kT, n, m, J):
   product_prob_left = f_prob_calc_left(J, kT, n, m)
   entropy_2_2_left = entropy(product_prob_left)
   entropy_2_2_right = entropy_2_2_left
-  print('============')
-  print(entropy_2_4)
-  print(entropy_2_2_left)
-  print('============')
   mutual_information = f_mutual_informations( entropy_2_4, entropy_2_2_right, entropy_2_2_left) # calculate the mutual information
   return mutual_information
 def theoretic_ising():

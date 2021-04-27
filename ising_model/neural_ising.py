@@ -35,8 +35,7 @@ class Net(nn.Module):
       x = self.fc3(x)
       return x
     
-def LossFunction(joint_prob, product_prob, joint_output, product_output):
-    eps = 1e-10
+def LossFunction(joint_prob, product_prob, joint_output, product_output, eps = 1e-10): 
     cond = product_prob < eps
     cond = cond.tolist()
     cond = np.where(cond)[0]
