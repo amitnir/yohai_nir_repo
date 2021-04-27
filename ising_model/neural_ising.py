@@ -44,7 +44,7 @@ def LossFunction(joint_prob, product_prob, joint_output, product_output, eps = 1
     product_output = np.delete(product_output, cond)
     product_prob = np.delete(product_prob, cond)
     joint_part = (joint_prob * joint_output).sum()
-    product_part = np.log(product_prob * (np.exp(product_output))).sum()
+    product_part = np.log((product_prob * (np.exp(product_output))).sum())
     #print(product_prob.shape)
     mutual = (joint_part - product_part)
     return mutual

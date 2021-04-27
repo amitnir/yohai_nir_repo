@@ -66,6 +66,7 @@ def f_prob_calc(J, kT, n, m):
     product_prob = np.array([my_dict[str(left_lattice)] * my_dict[str(right_lattice)]
                              for left_lattice in left_lattices
                              for right_lattice in right_lattices])
+    product_prob /= product_prob.sum()
     return joint_prob, product_prob
 # calculate left and right entropy
 def f_prob_calc_left(J, kT, n, m):   
@@ -125,4 +126,4 @@ def theoretic_ising():
 
 
 
-theoretic_ising()
+#theoretic_ising()
