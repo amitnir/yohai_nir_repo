@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+import torch.optim as optim
 
 # Deep neural network
 # Here I define the model as was written in the MICE article
@@ -45,6 +46,7 @@ def LossFunction(joint_prob, product_prob, joint_output, product_output):
     product_prob = np.delete(product_prob, cond)
     joint_part = (joint_prob * joint_output).sum()
     product_part = np.log(product_prob * (np.exp(product_output))).sum()
+    #print(product_prob.shape)
     mutual = (joint_part - product_part)
     return mutual
 
@@ -52,27 +54,15 @@ def run_ising(kT, n, m, J):
     lattices = np.array(si.f_ising_creator(n, m)) # list of nxm ising lattices
     left_lattices, right_lattices = si.f_splitter(lattices) # split all lattices into left and right ones
     return lattices, left_lattices, right_lattices
-
-def prob_calc(lattices, left_lattices, right_lattices, J, kT):
-    bol_lat = si.f_boltzmann(lattices, J, kT)
-    bol_left = si.f_boltzmann(left_lattices, J, kT)
-    bol_right = si.f_boltzmann(right_lattices, J, kT)
-    bol_left /= bol_left.sum()
-    bol_right /= bol_right.sum()
-    prod_prob = bol_left * bol_right
-    prod_prob /= prod_prob.sum()
-    joint_prob = bol_lat  
-    return prod_prob, joint_prob
     
-
 def calcualte_entropy_for_one_temperature(kT):
+    print('here')
     #kT = 9999
     J = 1
     n= 2
     m = 4 
     batch_size = 256
     lattices, left_lattices, right_lattices = run_ising(kT, n, m, J)
-    product_prob, joint_prob = prob_calc(lattices, left_lattices, right_lattices, J, kT)
     AB = torch.tensor(lattices)
     loader = DataLoader(AB, batch_size=batch_size, shuffle=False)
     model = Net()
@@ -80,9 +70,8 @@ def calcualte_entropy_for_one_temperature(kT):
     n_epochs = 25
     # empty list to store training losses
     train_losses = []
-    
+    joint_prob, product_prob = si.f_prob_calc(J, kT, n, m)
     # training the model
-    
     for epoch in range(n_epochs):
         flag = 0
         for batch_idx, x in enumerate(loader):
@@ -92,11 +81,10 @@ def calcualte_entropy_for_one_temperature(kT):
           flag += batch_size
           loss_train.requires_grad=True     
           # computing the updated weights of all the model parameters
-          optimizer.zero_grad() 
+          optimizer.zero_grad()
           loss_train.backward()
           optimizer.step()
         train_losses.append(loss_train)
-        #print(epoch,' : ',loss_train.item())
-    return train_losses[0]      
-
-train_losses = calcualte_entropy_for_one_temperature(kT=1)
+        
+    return train_losses     
+#train_losses = calcualte_entropy_for_one_temperature(kT=3)

@@ -43,16 +43,30 @@ def f_entropy(lattices, J, kT):
     entropies = entropy(boltzmann)
     return entropies, energy
 # calculate boltzmann normalized probabilities
-def f_boltzmann(lattices, J, kT):   
-    energy = (lattices * J * (
-                            np.roll(lattices, shift=1, axis=1) +
-                            np.roll(lattices, shift=-1, axis=1) +
-                            np.roll(lattices, shift=1, axis=2) +
-                            np.roll(lattices, shift=-1, axis=2)
-                            )).sum(axis=(1,2))
-    boltzmann = np.exp(-energy/kT) # unnormalized boltzmann
-    boltzmann = boltzmann / boltzmann.sum()
+def f_boltzmann(lattice, J, kT):   
+    energy = (lattice * J * (
+                            np.roll(lattice, shift=1, axis=0) +
+                            np.roll(lattice, shift=-1, axis=1) +
+                            np.roll(lattice, shift=1, axis=0) +
+                            np.roll(lattice, shift=-1, axis=1)
+                            )).sum(axis=(0,1))
+    boltzmann = np.exp(-(energy)/kT) # unnormalized boltzmann
     return boltzmann
+def f_prob_calc(J, kT, n, m):   
+    left_comb = f_ising_creator(n,int(m/2))
+    lattices = np.array(f_ising_creator(n, m))
+    left_lattices, right_lattices = f_splitter(lattices)
+    my_dict = {str(lattice): 0 for lattice in left_comb}
+    joint_prob = np.array([f_boltzmann(lattice, J, kT) for lattice in lattices])
+    joint_prob /= joint_prob.sum()
+    flag = 0
+    for left_lattice in left_lattices:
+        my_dict[str(left_lattice)] += joint_prob[flag]
+        flag += 1
+    product_prob = np.array([my_dict[str(left_lattice)] * my_dict[str(right_lattice)]
+                             for left_lattice in left_lattices
+                             for right_lattice in right_lattices])
+    return joint_prob, product_prob
 # calculate mutual information
 def f_mutual_informations(S_ab, S_a, S_b):   
   mutual_informations = (S_a + S_b) - S_ab 
@@ -70,7 +84,7 @@ def run_ising(kT, n, m, J):
   entropy_2_2_right, energy_right = f_entropy(right_lattices, J, kT) # calculate the entropy of the small right lattices
   mutual_information = f_mutual_informations( entropy_2_4, entropy_2_2_right, entropy_2_2_left) # calculate the mutual information
   return mutual_information
-def main():
+def theoretic_ising():
 
     list_mutual_information = []
     start_kT = 0.01
@@ -79,9 +93,10 @@ def main():
     J = 1   
     n= 2
     m = 4
-    for kT in np.linspace(start_kT, end_kT, num=num_T, endpoint=False):
-      mutual_information = run_ising(kT, n, m, J)
-      list_mutual_information.append(mutual_information)  
+    list_mutual_information = [
+                               run_ising(kT, n, m, J)
+                               for kT in np.linspace(start_kT, end_kT, num=num_T, endpoint=False)
+                               ]
     plt.plot(np.linspace(start_kT, end_kT, num=num_T, endpoint=False), list_mutual_information, linewidth=5)
     plt.title(f'{n}x{m} ising model',fontsize=25)
     plt.ylabel('Averaged mutual information',fontsize=15)
@@ -93,4 +108,4 @@ def main():
 
 
 
-#main()
+theoretic_ising()
