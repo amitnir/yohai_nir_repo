@@ -67,6 +67,20 @@ def f_prob_calc(J, kT, n, m):
                              for left_lattice in left_lattices
                              for right_lattice in right_lattices])
     return joint_prob, product_prob
+# calculate left and right entropy
+def f_prob_calc_left(J, kT, n, m):   
+    left_comb = f_ising_creator(n,int(m/2))
+    lattices = np.array(f_ising_creator(n, m))
+    left_lattices, right_lattices = f_splitter(lattices)
+    my_dict = {str(lattice): 0 for lattice in left_comb}
+    joint_prob = np.array([f_boltzmann(lattice, J, kT) for lattice in lattices])
+    joint_prob /= joint_prob.sum()
+    flag = 0
+    for left_lattice in left_lattices:
+        my_dict[str(left_lattice)] += joint_prob[flag]
+        flag += 1
+    prod_prob_left = np.array([prob for prob in my_dict.values()])
+    return prod_prob_left
 # calculate mutual information
 def f_mutual_informations(S_ab, S_a, S_b):   
   mutual_informations = (S_a + S_b) - S_ab 
@@ -80,8 +94,15 @@ def run_ising(kT, n, m, J):
   lattices = np.array(f_ising_creator(n, m)) # list of nxm ising lattices
   left_lattices, right_lattices = f_splitter(lattices) # split all lattices into left and right ones
   entropy_2_4, energy_full = f_entropy(lattices, J, kT) # calculate the entropy of the big lattices
-  entropy_2_2_left, energy_left = f_entropy(left_lattices, J, kT) # calculate the entropy of the small left lattices
-  entropy_2_2_right, energy_right = f_entropy(right_lattices, J, kT) # calculate the entropy of the small right lattices
+  #entropy_2_2_left, energy_left = f_entropy(left_lattices, J, kT) # calculate the entropy of the small left lattices
+  #entropy_2_2_right, energy_right = f_entropy(right_lattices, J, kT) # calculate the entropy of the small right lattices
+  product_prob_left = f_prob_calc_left(J, kT, n, m)
+  entropy_2_2_left = entropy(product_prob_left)
+  entropy_2_2_right = entropy_2_2_left
+  print('============')
+  print(entropy_2_4)
+  print(entropy_2_2_left)
+  print('============')
   mutual_information = f_mutual_informations( entropy_2_4, entropy_2_2_right, entropy_2_2_left) # calculate the mutual information
   return mutual_information
 def theoretic_ising():
