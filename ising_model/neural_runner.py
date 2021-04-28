@@ -10,9 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 start_kT = 0.01
-end_kT = 10
+end_kT = 30
 num_T = 10
-list_mutual_information = []
 n = 2
 m = 4
 

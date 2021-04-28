@@ -43,7 +43,7 @@ def f_entropy(lattices, J, kT):
     entropies = entropy(boltzmann)
     return entropies, energy
 # calculate boltzmann normalized probabilities
-def f_boltzmann(lattice, J, kT):   
+def f_boltzmann(lattice, J, kT):
     energy = (lattice * J * (
                             np.roll(lattice, shift=1, axis=0) +
                             np.roll(lattice, shift=-1, axis=1) +
@@ -63,10 +63,10 @@ def f_prob_calc(J, kT, n, m):
     for left_lattice in left_lattices:
         my_dict[str(left_lattice)] += joint_prob[flag]
         flag += 1
-    product_prob = np.array([my_dict[str(left_lattice)] * my_dict[str(right_lattice)]
-                             for left_lattice in left_lattices
-                             for right_lattice in right_lattices])
-    product_prob /= product_prob.sum()
+    product_prob = np.array([my_dict[str(left_lattices[i])] * my_dict[str(right_lattices[i])]
+                             for i in range(256)])
+    
+    #product_prob /= product_prob.sum()
     return joint_prob, product_prob
 # calculate left and right entropy
 def f_prob_calc_left(J, kT, n, m):   
@@ -105,8 +105,8 @@ def run_ising(kT, n, m, J):
 def theoretic_ising():
 
     list_mutual_information = []
-    start_kT = 0.01
-    end_kT = 10
+    start_kT = 0.5
+    end_kT = 0.5
     num_T = 100   
     J = 1   
     n= 2
