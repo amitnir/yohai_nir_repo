@@ -26,21 +26,21 @@ class Net(nn.Module):
 
     def forward(self, x):
       x = x.view(-1, 2*4) # turn it into a 2d tensor
-      #x = self.fc1(F.relu(x))
-      #x = self.fc2(F.relu(x))
-      x = self.fc1(x)
-      x = self.fc2(x)
+      x = self.fc1(F.relu(x))
+      x = self.fc2(F.relu(x))
+      #x = self.fc1(x)
+      #x = self.fc2(x)
       return x
     
-def LossFunction(joint_prob, product_prob, joint_output, product_output):
-    
+def loss_function(joint_prob, product_prob, joint_output, product_output):
     joint_prob = joint_prob.reshape(-1,1)
     product_prob = product_prob.reshape(-1,1)
     joint_part = (joint_prob * joint_output).sum()
-    product_part = np.log(
-                         (product_prob * (np.exp(product_output))).sum()
+    product_part = torch.log(
+                         (product_prob * (torch.exp(product_output))).sum()
                          )
-    mutual = (joint_part - product_part)
+    mutual = joint_part - product_part
+    
     return mutual
 
 def run_ising(kT, n, m, J):
@@ -57,13 +57,15 @@ def calcualte_entropy_for_one_temperature(kT):
     batch_size = 256
     lattices, left_lattices, right_lattices = run_ising(kT, n, m, J)
     AB = torch.tensor(lattices)
-    loader = DataLoader(AB, batch_size=batch_size, shuffle=True)
+    loader = DataLoader(AB, batch_size=batch_size, shuffle=False)
     model = Net()
     optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.01)
-    n_epochs = 10
+    n_epochs = 20
     # empty list to store training losses
     train_losses = []
     joint_prob, product_prob = si.f_prob_calc(J, kT, n, m)
+    joint_prob = torch.tensor(joint_prob, requires_grad=False)
+    product_prob = torch.tensor(product_prob, requires_grad=False)
     # training the model
     for epoch in range(n_epochs):
         flag = 0
@@ -72,9 +74,8 @@ def calcualte_entropy_for_one_temperature(kT):
             optimizer.zero_grad()
             joint_output = model(x.float())
             product_output = model(x.float())
-            loss_train = torch.tensor(LossFunction(joint_prob[flag:flag+batch_size], product_prob[flag:flag+batch_size], joint_output[flag:flag+batch_size].detach().numpy(), product_output[flag:flag+batch_size].detach().numpy()))
-            flag += batch_size
-            loss_train.requires_grad=True     
+            loss_train = loss_function(joint_prob[flag:flag+batch_size], product_prob[flag:flag+batch_size], joint_output[flag:flag+batch_size], product_output[flag:flag+batch_size])
+            flag += batch_size   
             # computing the updated weights of all the model parameters          
             loss_train.backward()
             optimizer.step()
@@ -82,4 +83,4 @@ def calcualte_entropy_for_one_temperature(kT):
         print(train_losses[-1])
     return train_losses[-1]     
 
-#train_losses = calcualte_entropy_for_one_temperature(kT=1.5)
+train_losses = calcualte_entropy_for_one_temperature(kT=1)
