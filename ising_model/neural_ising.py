@@ -26,10 +26,10 @@ class Net(nn.Module):
 
     def forward(self, x):
       x = x.view(-1, 2*4) # turn it into a 2d tensor
-      x = self.fc1(F.relu(x))
-      x = self.fc2(F.relu(x))
-      #x = self.fc1(x)
-      #x = self.fc2(x)
+      #x = self.fc1(F.relu(x))
+      #x = self.fc2(F.relu(x))
+      x = self.fc1(x)
+      x = self.fc2(x)
       return x
     
 def LossFunction(joint_prob, product_prob, joint_output, product_output):
@@ -68,6 +68,7 @@ def calcualte_entropy_for_one_temperature(kT):
     for epoch in range(n_epochs):
         flag = 0
         for batch_idx, x in enumerate(loader):
+          # x is (256, 2, 4) shape. it is the lattices tensor
           optimizer.zero_grad()
           joint_output = model(x.float())
           product_output = model(x.float())
