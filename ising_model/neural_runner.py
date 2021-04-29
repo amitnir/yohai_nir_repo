@@ -10,8 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 start_kT = 0.01
-end_kT = 300
-num_T = 100
+end_kT = 30
+num_T = 30
 n = 2
 m = 4
 

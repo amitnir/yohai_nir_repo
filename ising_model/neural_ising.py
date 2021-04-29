@@ -57,7 +57,7 @@ def calcualte_entropy_for_one_temperature(kT):
     batch_size = 256
     lattices, left_lattices, right_lattices = run_ising(kT, n, m, J)
     AB = torch.tensor(lattices)
-    loader = DataLoader(AB, batch_size=batch_size, shuffle=False)
+    loader = DataLoader(AB, batch_size=batch_size, shuffle=True)
     model = Net()
     optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.01)
     n_epochs = 10
@@ -69,17 +69,17 @@ def calcualte_entropy_for_one_temperature(kT):
         flag = 0
         for batch_idx, x in enumerate(loader):
           # x is (256, 2, 4) shape. it is the lattices tensor
-          optimizer.zero_grad()
-          joint_output = model(x.float())
-          product_output = model(x.float())
-          loss_train = torch.tensor(LossFunction(joint_prob[flag:flag+batch_size], product_prob[flag:flag+batch_size], joint_output[flag:flag+batch_size].detach().numpy(), product_output[flag:flag+batch_size].detach().numpy()))
-          flag += batch_size
-          loss_train.requires_grad=True     
-          # computing the updated weights of all the model parameters          
-          loss_train.backward()
-          optimizer.step()
+            optimizer.zero_grad()
+            joint_output = model(x.float())
+            product_output = model(x.float())
+            loss_train = torch.tensor(LossFunction(joint_prob[flag:flag+batch_size], product_prob[flag:flag+batch_size], joint_output[flag:flag+batch_size].detach().numpy(), product_output[flag:flag+batch_size].detach().numpy()))
+            flag += batch_size
+            loss_train.requires_grad=True     
+            # computing the updated weights of all the model parameters          
+            loss_train.backward()
+            optimizer.step()
         train_losses.append(loss_train)
         print(train_losses[-1])
-    return train_losses     
+    return train_losses[-1]     
 
-train_losses = calcualte_entropy_for_one_temperature(kT=1.5)
+#train_losses = calcualte_entropy_for_one_temperature(kT=1.5)
